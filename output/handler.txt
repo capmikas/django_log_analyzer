@@ -1,0 +1,16 @@
+HANDLER    DEBUG     INFO      WARNING      ERROR
+/admin/dashboard/     0     16     0     5     0
+/admin/login/     0     16     0     6     0
+/api/v1/auth/login/     0     17     0     3     0
+/api/v1/cart/     0     14     0     2     0
+/api/v1/checkout/     0     19     0     6     0
+/api/v1/orders/     0     14     0     5     0
+/api/v1/payments/     0     14     0     2     0
+/api/v1/products/     0     16     0     7     0
+/api/v1/reviews/     0     27     0     7     0
+/api/v1/shipping/     0     11     0     4     0
+/api/v1/support/     0     23     0     5     0
+/api/v1/users/     0     11     0     4     0
+/api/v666/support/     0     1     0     0     0
+________________________________________________
+...     0     199     0     56     0     0
