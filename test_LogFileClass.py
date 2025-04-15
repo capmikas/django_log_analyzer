@@ -1,59 +1,62 @@
+import random
 import pytest
 from LogFileClass import *
+from collections import defaultdict
 
-report_list = \
-    [
-        {
-            'handler_name_1': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1},
-            'handler_name_2': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1}
-        },
-        {
-            'handler_name_3': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1},
-            'handler_name_1': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1}
-        },
-        {
-            'handler_name_2': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1},
-            'handler_name_6': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1}
-        },
-    ]
+log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
-merged_report = \
-    {
-        'handler_name_1': {'DEBUG': 2, 'INFO': 2, 'WARNING': 2, 'ERROR': 2, 'CRITICAL': 2},
-        'handler_name_2': {'DEBUG': 2, 'INFO': 2, 'WARNING': 2, 'ERROR': 2, 'CRITICAL': 2},
-        'handler_name_3': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1},
-        'handler_name_6': {'DEBUG': 1, 'INFO': 1, 'WARNING': 1, 'ERROR': 1, 'CRITICAL': 1}
+
+@pytest.fixture()
+def single_report():
+    handlers_names = [random.randint(1, 10) for i in range(random.randint(5, 10))]
+    report = {f"handler_name_{name}": {log_level: random.randint(0, 10) for log_level in log_levels} for name in handlers_names}
+    return report
+
+
+@pytest.fixture()
+def log_file():
+    strings_list = [(f"2025-04-15 12:00:00,000 {random.choice(log_levels)} handler_name_{random.randint(1, 10)} "
+                     f"200 OK [192.168.1.59]") for i in range(random.randint(50, 100))]
+    return strings_list
+
+
+def test_parse_log(log_file):
+    content_of_log = log_file
+    report = defaultdict(lambda: defaultdict(int))
+    for line in content_of_log:
+        words = line.split()
+        handlers = [word for word in words if word.startswith('/')]
+        log_level = words[2]
+        for handler in handlers:
+            report[handler][log_level] += 1
+    report_fin =  {
+        handler: {
+            level: counts.get(level, 0)
+            for level in log_levels
+        }
+        for handler, counts in report.items()
     }
+    assert LogFile.parse_log(content_of_log) == report_fin
 
 
-file_read = \
-    {
-        '/admin/dashboard/': {'DEBUG': 0, 'INFO': 1, 'WARNING': 0, 'ERROR': 1, 'CRITICAL': 0},
-        '/api/v1/cart/': {'DEBUG': 0, 'INFO': 1, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0},
-        '/api/v1/products/': {'DEBUG': 0, 'INFO': 1, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0},
-        '/api/v1/reviews/': {'DEBUG': 0, 'INFO': 2, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0},
-        '/api/v1/support/': {'DEBUG': 0, 'INFO': 1, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0},
-        '/api/v1/users/': {'DEBUG': 0, 'INFO': 1, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0}
-    }
-
-total_result = \
-    {
-        'DEBUG': 6,
-        'INFO': 6,
-        'WARNING': 6,
-        'ERROR': 6,
-        'CRITICAL': 6,
-    }
-
-
-def test_read_log():
-    assert LogFile.read_log('app0.log') == file_read
-
-
-# @pytest.mark.parametrize("report", report_list)
-def test_merge_files():
+def test_merge_files(single_report):
+    report_list = [single_report for i in range(random.randint(3, 5))]
+    merged_report = {}
+    for report in report_list:
+        for handler, stats in report.items():
+            if handler not in merged_report:
+                merged_report[handler] = {level: stats[level] for level in log_levels}
+            else:
+                for level in log_levels:
+                    merged_report[handler][level] += stats[level]
+    merged_report = dict(sorted(merged_report.items()))
     assert LogFile.merge_files(report_list) == merged_report
 
 
-def test_get_total():
-    assert LogFile.get_total(merged_report) == total_result
+def test_get_total(single_report):
+    report = single_report
+    total = {level: 0 for level in log_levels}
+    for stats in report.values():
+        for level in total:
+            total[level] += stats.get(level, 0)
+    assert LogFile.get_total(report) == total

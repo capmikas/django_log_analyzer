@@ -9,12 +9,11 @@ def main():
     words_list = argv[1:]
     file_name_list = []
     for i, word in enumerate(words_list):
-        if word == ('--report'):
+        if word == '--report':
             try:
                 report_file_name = words_list[i+1]
             except Exception as e:
-                print('Необходимо ввести название файла')
-                exit(e)
+                exit('Необходимо ввести название файла')
             break
         else:
             if os.path.exists(f"logs/{word}"):
@@ -27,14 +26,15 @@ def main():
     with Pool(cpu_count()) as pool:
         report_list = pool.map(read_file_pool, file_name_list)
     merged_file = LogFileClass.LogFile.merge_files(report_list)
-    LogFileClass.LogFile.print_report(merged_file)
-    print('\n')
+    report = LogFileClass.LogFile.form_report(merged_file)
+    LogFileClass.LogFile.print_report(report)
     if report_file_name:
-        LogFileClass.LogFile.save_report(merged_file, report_file_name)
+        LogFileClass.LogFile.save_report(report, report_file_name)
 
 
 def read_file_pool(file_name):
-    report = LogFileClass.LogFile.read_log(file_name)
+    log_file = LogFileClass.LogFile.read_log(file_name)
+    report = LogFileClass.LogFile.parse_log(log_file)
     return report
 
 
